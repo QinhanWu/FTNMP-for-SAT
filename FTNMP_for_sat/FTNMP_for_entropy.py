@@ -305,7 +305,6 @@ R = 4
 clauses,tendencies,n_trange_list,add_clauses,devide,devide_bound,devide_node = gg.triangle_long_graph_free(turns,n_trangel,n_long)
 G_fac,max_item = gg.G_generator_fac(clauses)
 nodes = list(range(max_item+1))
-#Nv,boundaries = gg.neighbor(max_item,clauses,R)
 Nv,boundaries = gg.boundaries_generation(G_fac,clauses,R)
 cavity,converged,edgelist2 = TNBP.TNBP_3_sat(G_fac,Nv,boundaries,clauses,tendencies,max_item,device)
 marginals_var=TNBP.marginal_TNBP(G_fac,nodes,edgelist2,Nv,boundaries,clauses,tendencies,cavity,max_item,device)
