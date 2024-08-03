@@ -1,10 +1,7 @@
 import torch as tc
-import numpy as np
 import networkx as nx
-import random
 import copy 
 import opt_einsum as oe
-import ftnmp.enumeration as en
 import time
 
 def G_generator_fac(clauses):

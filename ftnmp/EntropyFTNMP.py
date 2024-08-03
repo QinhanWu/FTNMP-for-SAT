@@ -1,15 +1,35 @@
 import torch as tc
 import opt_einsum as oe
-import ftnmp.TNBP as TNBP
-import ftnmp.nx_test as nxt
-import ftnmp.get_regions_new as grn
+import TNBP as TNBP
+import nx_test as nxt
+import get_regions_new as grn
 
 
-#FTNMP
 def entropy_single_point(single_point,G_fac,clauses,tendencies,devides,devide_bound,cavity,egdelist2,degree_node,max_item,device):
     '''
+    -----------------------------------
     It can be proven that when 𝑛 regions are connected by only one node, the impact of this node on entropy is 
     (𝑛-1)×ln(product of the outgoing messages of this node)
+    -----------------------------------
+    
+    Computes the entropy contribution of a single point node in a factor graph, given its impact on the entropy of regions connected through this node.
+
+    Parameters:
+    - single_point (int): The node whose entropy impact is being calculated.
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): List of tendencies corresponding to each clause.
+    - devides (list of lists): List of node sets, where each set corresponds to a division of the factor graph.
+    - devide_bound (list of lists): List of boundaries corresponding to each division.
+    - cavity (dict): Dictionary where keys are nodes and values are tensors representing cavity messages.
+    - egdelist2 (list of lists): List of edges, where each edge connects two nodes.
+    - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
+    - max_item (int): The maximum index of nodes in the factor graph.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+
+    Returns:
+    - Error (Tensor): The computed entropy error for the single point node.
+    
     '''
     tensors = []
     #norms = []
@@ -42,8 +62,6 @@ def entropy_single_point(single_point,G_fac,clauses,tendencies,devides,devide_bo
                     subeqin += oe.get_symbol(node)
                     subtensors.append(subtensor)
                     subeqin += "," 
-
-            
 
             for nodey in [i for i in bd if i != single_point]:
                 nodey_nei = list(G_fac.neighbors(nodey))
@@ -113,6 +131,24 @@ def entropy_single_point(single_point,G_fac,clauses,tendencies,devides,devide_bo
     return Error
 
 def entropy_cluster(tar_node,G_fac,Nv,boundaries,clauses,tendencies,cavity,max_item,nei_cxx,device):
+    '''
+    Computes the local entropy of a cluster of nodes in a factor graph related to a target node.
+
+    Parameters:
+    - tar_node (int): The target node for which entropy is being calculated.
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - Nv (list of lists): List of devides of the corresponding of index.
+    - boundaries (list of lists): List of nodes in the boundary of devides of the corresponding node of index.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - cavity (tensor): A tensor with shape (n+m)*(n+m), where n is the number of variable node and m is the number of factor node, to store the cavity messages form the first axis to the second axis.
+    - max_item (int): Maximum index value in the graph.
+    - nei_cxx (list of lists): List of nodes in the neighborhoods of the corresponding node of index.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+
+    Returns:
+    - marginal (Tensor): The computed !entropy! tensor for the cluster related to the target node.
+    '''
     egdelist2 = [sorted(edge) for edge in G_fac.edges()]
     tensors = []
     eqin = ''
@@ -177,9 +213,6 @@ def entropy_cluster(tar_node,G_fac,Nv,boundaries,clauses,tendencies,cavity,max_i
                 tensors.append(tensor)
                 eqin += oe.get_symbol(nodey)
                 eqin += ","
-
-         
-            
     eqin = eqin.rstrip(',') 
     eqin += '->'
     eq = eqin 
@@ -190,6 +223,23 @@ def entropy_cluster(tar_node,G_fac,Nv,boundaries,clauses,tendencies,cavity,max_i
     return marginal
 
 def entropies_cluster(G_fac,clauses,tendencies,devide,devide_bound,max_item,nei_cxx,cavity,device):
+    '''
+    Computes the entropy for each cluster in the factor graph and returns the logarithms of the marginal probabilities.
+
+    Parameters:
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - devide (list of lists): List of clusters, where each cluster is a list of nodes.
+    - devide_bound (list of lists): List of boundaries for each cluster.
+    - max_item (int): Maximum index value in the graph.
+    - nei_cxx (list of lists): List of nodes in the neighborhoods of the corresponding node of index.
+    - cavity (tensor): A tensor with shape (n+m)*(n+m), where n is the number of variable node and m is the number of factor node, to store the cavity messages form the first axis to the second axis.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+
+    Returns:
+    - marginal_devides (list of Tensor): A list of tensors where each tensor is the logarithm of the local entropy for a cluster.
+    '''
     marginal_devides = []
     for devide_id in range(len(devide)):
         marginal_devide = entropy_cluster(devide_id,G_fac,devide,devide_bound,clauses,tendencies,cavity,max_item,nei_cxx,device)
@@ -197,6 +247,25 @@ def entropies_cluster(G_fac,clauses,tendencies,devide,devide_bound,max_item,nei_
     return marginal_devides
 
 def entropies_point(single_list,G_fac,clauses,tendencies,devides,devide_bound,cavity,edgelist2,degree_node,max_item,device):
+    '''
+    Computes the entropy for a list of nodes in the factor graph and returns the influence to the global entropies.
+
+    Parameters:
+    - single_list (list of int): List of nodes for which to compute entropy.
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - devides (list of lists): List of clusters, where each cluster is a list of nodes.
+    - devide_bound (list of lists): List of boundaries for each cluster.
+    - cavity (tensor): A tensor with shape (n+m)*(n+m), where n is the number of variable node and m is the number of factor node, to store the cavity messages form the first axis to the second axis.
+    - edgelist2 (list of lists): List of edges in the factor graph.
+    - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
+    - max_item (int): Maximum index value in the graph.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+
+    Returns:
+    - logs_point (list of Tensor): A list of tensors where each tensor is the entropy for a node in the `single_list`.
+    '''
     logs_point = []
     for node in set(single_list):
         if node in degree_node:
@@ -205,6 +274,22 @@ def entropies_point(single_list,G_fac,clauses,tendencies,devides,devide_bound,ca
     return logs_point
 
 def entropy_intersection(G_fac,edges,clauses,tendencies,cavity,max_item,Nv,device):
+    '''
+    Computes the entropy for intersections of clusters defined by the edges in the factor graph.
+
+    Parameters:
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - edges (list of lists): List of edges in the factor graph.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - cavity (tensor): A tensor with shape (n+m)*(n+m), where n is the number of variable node and m is the number of factor node, to store the cavity messages form the first axis to the second axis.
+    - max_item (int): Maximum index value in the graph.
+    - Nv (list of lists): List of devides of the corresponding of index.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+
+    Returns:
+    - ms (list of Tensor): A list of tensors where each tensor is the logarithm of entropy for each edge intersection.
+    '''
     ms = []
     for edge_id in range(len(edges)):
         m = entropy_cluster(edge_id,G_fac,edges,edges,clauses,tendencies,cavity,max_item,Nv,device)
@@ -212,6 +297,28 @@ def entropy_intersection(G_fac,edges,clauses,tendencies,cavity,max_item,Nv,devic
     return ms
 
 def EntropyZ_new(G_fac,clauses,tendencies,devides,devide_bound,region_info,single_list,max_item,Nv,boundaries,degree_node,device,file):
+    '''
+    Computes the entropy of a system using various clusters and intersections defined in the factor graph.
+
+    Parameters:
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - devides (list of lists): Decomposed sets of nodes for entropy calculations.
+    - devide_bound (list of lists): Boundaries for each decomposition.
+    - region_info (list): Information about different regions in the graph.
+    - single_list (list): List of single nodes to consider for point-wise entropy calculations.
+    - max_item (int): Maximum index value in the graph.
+    - Nv (dict): Dictionary where keys are nodes and values are sets of neighboring nodes.
+    - boundaries (dict): Dictionary where keys are nodes and values are boundary sets.
+    - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+    - file (str): Path to the file where results may be saved or used.
+
+    Returns:
+    - entropy (Tensor): The computed entropy of the system.
+    - step (int): The number of steps taken in the convergence process.
+    '''
 
     intersections_info, edges_info, direct_products_info ,else_situations =nxt.cluster_edges_generate_new(G_fac,max_item,devides,devide_bound)
     direct_products = [sorted(direct_products_info[i][2]) for i in range(len(direct_products_info)) if len(direct_products_info[i][2])>=2 and min(direct_products_info[i][0],direct_products_info[i][1])<=len(region_info)]

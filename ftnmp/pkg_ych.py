@@ -1,12 +1,9 @@
 from copy import deepcopy
 import networkx as nx
 import numpy as np
-import ftnmp.graph_generate as gg
 
-'''
-调整内容:用来编写最新的region生成函数
-先实现二次划分，不考虑公共边更新的问题
-'''
+
+
 
 def cut(G,nodes = False):
     G_loop = deepcopy(G)
@@ -88,7 +85,7 @@ def Region_generator(G,e,R):
 
         if edge_new:
             boundary = []
-            for node in outnode: # 由于我们考虑的是圈的长度，因此如果一个点在一轮中没有进入outnode，也就意味着这个点不属于任何一个和上一轮区域相交的小环，那么新添加了点之后也不会属于了（因为该点到新的点必然经过上一轮判定过的点，所属的圈也必然包含途径的点）
+            for node in outnode: 
                 if len(Region[node])<len(G[node]):
                     boundary.append(node)
         l = len(boundary)
@@ -104,19 +101,11 @@ def get_Regions(G,R,N):
     Regions = []
     edges = list(G.edges())
     for e in edges:
-        # print(e)
         if G_remain.has_edge(e[0],e[1]):
-            # print(e)
-            # t = time.time()
             g = Region_generator(G_remain,e,R)
-            # print('Region',time.time()-t)
-            # print(len(g))
-            G_remain.remove_edges_from(list(g.edges())) # 不管怎样，g的所有边都可以从G_remain上移除了
-            # print(list(g))
-            if len(g) > 2:# 在一条边的基础上找到了其他区域
-                # t = time.time()
+            G_remain.remove_edges_from(list(g.edges())) 
+            if len(g) > 2:
                 Regions.append(devide_region(g,R,N))
-                # print('subRegion',time.time()-t)
             G_remain = cut(G_remain,list(g))
     return Regions
 
@@ -131,7 +120,6 @@ def devide_region(g,R,N):
             if not g_remain.has_edge(e[0],e[1]):
                 continue
             subg,g_remain = subregion_generator(g_remain,e,R,N)
-            # print(list(subg),list(g_remain))
             if len(subg)>0:
                 gg.append(subg)
                 g_remain = cut(g_remain,list(subg))
@@ -148,13 +136,11 @@ def subregion_generator(g,e,R,N):
     gtemp.remove_edge(e[0],e[1])
     edge_new = True
 
-    # 先找到新的subregion
     while edge_new:
         boundary = []
         for node in list(region):
             if len(region[node])<len(g[node]):
                 boundary.append(node)
-        # print(boundary)
 
         edge_new = False
         nomore = False
@@ -172,32 +158,27 @@ def subregion_generator(g,e,R,N):
                         l_path_in = nx.shortest_path_length(region,n1,n2)
                         if len(path_out) + l_path_in <= r+1:
                             edge_new = True
-                            # print(path_out,list(region))
-                            if len(path_out)+len(region) > N+2: # 添加新边会超范围，就跳过
+                            if len(path_out)+len(region) > N+2:
                                 nomore = True
                                 continue
                             for node_id in range(len(path_out)-1):
                                 nomore = False
                                 region.add_edge(path_out[node_id],path_out[node_id+1])
                                 gtemp.remove_edge(path_out[node_id],path_out[node_id+1])
-                            # print('getmp',list(gtemp))
                             break
-                if edge_new: # 一次只能添加一条新的边
+                if edge_new: 
                     break
-            if edge_new: # 一次只能添加一条新的边
+            if edge_new: 
                 break 
         
-        if nomore or len(region)==N: # 当超过上限或恰好抵达上限时break
+        if nomore or len(region)==N: 
             break
-
-    # 需要保留subregion和g_remain的有意义的公共边
     crossnodes = []
     for node in list(region):
         l = len(g[node])
-        if l>2 and l>len(region[node]): # l=2的的话肯定不可能是公共点喽
+        if l>2 and l>len(region[node]): 
             crossnodes.append(node)
 
-    # print('gtemp',list(gtemp),'edge',list(gtemp.edges()),len(list(gtemp.edges())))
 
     left_edges = nx.Graph()
     l = len(crossnodes)
@@ -206,29 +187,28 @@ def subregion_generator(g,e,R,N):
             for j in range(i):
                 n1 = crossnodes[i]
                 n2 = crossnodes[j]
-                if n1 in left_edges and n2 in left_edges and nx.has_path(left_edges,n1,n2): # 当两个点有路径相连时就先放过他们吧，在当前处理的情况来说，大概就是对的？
+                if n1 in left_edges and n2 in left_edges and nx.has_path(left_edges,n1,n2): 
                     continue
                 if nx.has_path(gtemp,n1,n2):
                     l1 = nx.shortest_path_length(gtemp,n1,n2)
                     path_in = nx.shortest_path(region,n1,n2)
                     l2 = len(path_in)-1
-                    if l1+l2 > R: # 注意length给出的不是点的数目，而是边的数目，所以l1不会多1
+                    if l1+l2 > R: 
                         continue
-                    # print(path_in)
                     for node_id in range(l2):
                         left_edges.add_edge(path_in[node_id],path_in[node_id+1])
 
-    # print(left_edges.edges(),'gtemp',list(gtemp),'edge',list(gtemp.edges()),len(list(gtemp.edges())))
 
     gtemp.add_edges_from(list(left_edges.edges()))
 
     return region,gtemp
 
-def safe_swap(T,i,j = None,forward = True): # dir 为0是换过来，1是换回去
-    '''
-    turn a0a1a2a3...ai...aj...b0b1b2b3...bi...bj... to ai aj bi bj a0a1a2a3...b0b1b2b3...
-    and back
-    '''
+'''
+def safe_swap(T,i,j = None,forward = True): 
+    
+    #turn a0a1a2a3...ai...aj...b0b1b2b3...bi...bj... to ai aj bi bj a0a1a2a3...b0b1b2b3...
+    #and back
+    
     if j!=None and j<i:
         [i,j] = [j,i]
 
@@ -312,7 +292,6 @@ def generate_graph_clique_wang(n,base_degree,seed,num3,maxk):
         numk = int(6*num3/(k*(k-1)))
         np.random.seed(seed+k)
         for i_clique in range(numk):
-            #在所有节点中任选k个点建立k阶clique
             vertices_choice = np.random.randint(low=0,high=n,size=(k))
             for i1 in range(len(vertices_choice)):
                 for i2 in range(i1+1,len(vertices_choice)):
@@ -321,7 +300,6 @@ def generate_graph_clique_wang(n,base_degree,seed,num3,maxk):
                     if v2 not in list(G.neighbors(v1)):
                         G.add_edge(v1,v2)
 
-    #如果生成的图有多个连通分支，则通过在两个分支之间增加两条连边来使它们连通
     while nx.number_connected_components(G) != 1:
         cc1 = list(list(nx.connected_components(G))[0])
         cc2 = list(list(nx.connected_components(G))[1])
@@ -359,3 +337,4 @@ def safe_inv(v):
             inv[i] = 0.
     return inv
 
+'''

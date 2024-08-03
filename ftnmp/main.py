@@ -1,11 +1,11 @@
 import torch as tc
-import ftnmp.graph_generate as gg
+import graph_generate as gg
 import numpy as np
-import ftnmp.contract_exact as ce
+import contract_exact as ce
 import time
-import ftnmp.EntropyBP as EBP
-import ftnmp.EntropyFTNMP as EFT
-import ftnmp.get_regions_new as grn
+import EntropyBP as EBP
+import EntropyFTNMP as EFT
+import get_regions_new as grn
 from tqdm import tqdm
 
 

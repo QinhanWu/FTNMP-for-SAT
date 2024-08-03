@@ -1,8 +1,8 @@
 
-import ftnmp.graph_generate as gg
+import graph_generate as gg
 import numpy as np
-import ftnmp.nx_test as nxt
-import ftnmp.get_regions_new as grn
+import nx_test as nxt
+import get_regions_new as grn
 from tqdm import tqdm
 
 

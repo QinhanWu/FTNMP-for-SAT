@@ -1,22 +1,9 @@
-import torch as tc
-import networkx as nx
-import opt_einsum as oe
-import ftnmp.graph_generate as gg
 import copy
-import numpy as np
-import ftnmp.TNBP as TNBP
+import TNBP as TNBP
 from collections import Counter
 import itertools as it
-import ftnmp.pkg_ych as ph
-import ftnmp.BP_fast as bpf
-import ftnmp.nx_test as nxt
-import time
-from itertools import combinations
-import ftnmp.Find as F
-
-
-
-
+import pkg_ych as ph
+import Find as F
 
 
 def merge_regions(graph, regions,clauses, split_point):
@@ -49,11 +36,8 @@ def merge_regions(graph, regions,clauses, split_point):
 
 
             if (len(set(region1) & set(region2))>2 and max(set(region1) & set(region2))>split_point) or check!=0:
-            #if len(set(region1) & set(region2))>2 :
-                #print(1)
                 return True
         
-        # Check for factor nodes in region1
         factor_neighbors_in_other_region = {}
         for node in region1:
             if not is_variable_node(node):  # It's a factor node
@@ -61,11 +45,7 @@ def merge_regions(graph, regions,clauses, split_point):
                     if neighbor not in region1:
                         if neighbor in region2:
                             factor_neighbors_in_other_region[neighbor] = factor_neighbors_in_other_region.get(neighbor, 0) + 1
-                            
-                            #print(region1,region2,factor_neighbors_in_other_region)
-                            #if factor_neighbors_in_other_region[neighbor] >= 2:
                             if len(factor_neighbors_in_other_region) >= 2:
-                                #print(2)
                                 return True
             
         return False
@@ -81,9 +61,8 @@ def merge_regions(graph, regions,clauses, split_point):
             to_merge = set(region)
             for j, other_region in enumerate(regions):
                 if j != i and j not in skip_indices:
-                    #print(region,other_region,should_merge(region, other_region))
-                    if should_merge(region, other_region) ==True :#or should_merge(other_region,region)==True:
-                        #print(region,other_region)
+                    
+                    if should_merge(region, other_region) ==True :
                         to_merge.update(other_region)
                         if len(region)==1:
                             
@@ -244,51 +223,6 @@ def get_regions_z(G,clauses,max_item,R_region,R_subregion):
             devides.append([fac_node]+nei)
     return devides,subdevides,region_info,ignore_var_node
 
-
-
-
-'''
-def get_regions_z2(G,clauses,max_item,R_region,R_subregion):
-    
-    devides = []
-    subdevides = []
-    ignore_var_node=[]
-    region_info = []
-    regions = ph.get_Regions(G,R_region,R_subregion)
-    regions = [list(re[0]) for re in regions]
-    regions = merge_regions(G,regions,clauses,max_item)
-    devides = regions_compelete(G,regions,max_item)
-    devides_one_dim = list(it.chain(*devides))
-    devides = devides+[[i] for i in range(max_item+1,max_item+1+len(clauses)) if i not in devides_one_dim]
-    devides = merge_regions(G,devides,clauses,max_item)
-    devides = [devide for devide in devides if len(devide)>1]
-
-    
-
-    ignore_var_node =[]
-    for devide_id in range(len(devides)):
-        devide = devides[devide_id]
-        region_info_ele = []
-        for noded in devide:
-            if len(set(list(G.neighbors(noded)))&set(devide)) > 1: 
-                ignore_var_node.append(noded)
-                region_info_ele.append(noded)
-        region_info.append(region_info_ele)
-    ignore_var_node = set(ignore_var_node)
-    ignore_var_node = [ivn for ivn in set(ignore_var_node) if ivn<=max_item]
-    devides_one_dim = list(it.chain(*devides))
-    for var_node in range(max_item+1):
-        if var_node not in ignore_var_node:
-            nei = list(G.neighbors(var_node))
-            devides.append([var_node]+nei)
-    
-    for fac_node in range(max_item+1,len(clauses)+max_item+1):
-        if fac_node not in devides_one_dim:
-            nei = list(G.neighbors(fac_node))
-            devides.append([fac_node]+nei)
-
-    return devides,subdevides,region_info,ignore_var_node
-'''
 
 
 def region_info_change(G_fac,clauses,region_info,max_item,ignore_var_node):
