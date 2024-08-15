@@ -56,35 +56,6 @@ def converge_and_step(G_fac,clauses,tendencies,devides,devide_bound,region_info,
 
     return step
 
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 device = 'cuda:0'
 R_subregion = 100
 file = open('step.txt','w')
