@@ -14,9 +14,9 @@ import nx_test as nxt
 def converge_and_step(G_fac,clauses,tendencies,devides,devide_bound,region_info,single_list,max_item,Nv,boundaries,degree_node, device,damping_factor = None):
     
     """
-    This program tests the number of steps. FTNMP is typically not set to R=2 because its accuracy is similar to BP. In practice, 
+    This program tests the number of steps. FTNMP is typically not set to R = 2 because its accuracy is similar to BP. In practice, 
     since various types of graphs might be encountered often have cycles affecting convergence, a damping factor is needed.
-    We will use a recommended damping factor of 0.5 for testing if R = 2 and damping factor of 0 for else case.
+    We will use a recommended damping factor of 0.5 for testing if R = 2 and damping factor of 0 for else cases.
     -----------------------------------------------------------------------------------------------------------------------------
     Parameters:
     - G_fac (Graph): The factor graph where nodes are connected by factors.
