@@ -10,6 +10,56 @@ import nx_test as nxt
 import BP_fast as bpf
 import copy
 
+
+def converge_and_step(G_fac,clauses,tendencies,devides,devide_bound,region_info,single_list,max_item,Nv,boundaries,degree_node, device,damping_factor = None):
+    
+    """
+    This program tests the number of steps. FTNMP is typically not set to R = 2 because its accuracy is similar to BP. In practice, 
+    since various types of graphs might be encountered often have cycles affecting convergence, a damping factor is needed.
+    We will use a recommended damping factor of 0.5 for testing if R = 2 and damping factor of 0 for else cases.
+    -----------------------------------------------------------------------------------------------------------------------------
+    Parameters:
+    - G_fac (Graph): The factor graph where nodes are connected by factors.
+    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
+    - tendencies (list of lists): Tendencies for each clause.
+    - devides (list of lists): Decomposed sets of nodes for entropy calculations.
+    - devide_bound (list of lists): Boundaries for each decomposition.
+    - region_info (list): Information about different regions in the graph.
+    - single_list (list): List of single nodes to consider for point-wise entropy calculations.
+    - max_item (int): Maximum index value in the graph.
+    - Nv (list of lists): List of devides of the corresponding of index.
+    - boundaries (list of lists): List of nodes in the boundary of the neighborhoods of the corresponding node of index.
+    - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
+    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
+    - damping_factor(float): Used to control the update learning rate. If not explicitly specified, the damping factor is set to 0.5 for R=2 and R=3, and 0 for all other cases.
+
+    Returns:
+    - entropy (Tensor): The computed entropy of the system.
+    - step (int): The number of steps taken in the convergence process.
+
+    """
+    if damping_factor is None:
+        if R_region == 2 or R_region == 3:
+            damping_factor = 0.5
+        else:
+            damping_factor = 0
+
+    intersections_info, edges_info, direct_products_info ,else_situations =nxt.cluster_edges_generate_new(G_fac,max_item,devides,devide_bound)
+    direct_products = [sorted(direct_products_info[i][2]) for i in range(len(direct_products_info)) if len(direct_products_info[i][2])>=2 and min(direct_products_info[i][0],direct_products_info[i][1])<=len(region_info)]
+    region_info,region_bound = grn.region_info_change(G_fac,clauses,region_info,max_item,single_list)
+    cavity,converged,edgelist2,step = TNBP_3_sat_interaction_new(G_fac,Nv,boundaries,clauses,tendencies,direct_products,max_item,region_info,region_bound,damping_factor,device)
+    intersections = [sorted(edges_info[i][2]) for i in range(len(edges_info))  ] 
+    loges_devides =  EFT.entropies_cluster(G_fac,clauses,tendencies,devides,devide_bound,max_item,Nv,cavity,device)
+    logs_points = EFT.entropies_point(single_list,G_fac,clauses,tendencies,devides,devide_bound,cavity,edgelist2,degree_node,max_item,device)
+    ms = sum(EFT.entropy_intersection(G_fac,intersections,clauses,tendencies,cavity,max_item,Nv,device))
+    entropy = sum(loges_devides)-sum(logs_points)-ms
+
+    return step
+
+
+
+
+
 def TNBP_3_sat_interaction_new(G_fac,Nv,boundaries,clauses,tendencies,interactions,max_item,region_info,region_bound,damping_factor,device):
     """
     Perform a tensor network belief propagation (the message here is equal to belief --the probapalities of nodes satisfy the constraints) 
@@ -199,50 +249,6 @@ def EntropyBP(clauses,tendencies,damping):
         logs_var.append(tc.log(marginals_fac[fac_node]))
     return entropy4,step
 
-def converge_and_step(G_fac,clauses,tendencies,devides,devide_bound,region_info,single_list,max_item,Nv,boundaries,degree_node, device,damping_factor = None):
-    
-    """
-    This program tests the number of steps. FTNMP is typically not set to R = 2 because its accuracy is similar to BP. In practice, 
-    since various types of graphs might be encountered often have cycles affecting convergence, a damping factor is needed.
-    We will use a recommended damping factor of 0.5 for testing if R = 2 and damping factor of 0 for else cases.
-    -----------------------------------------------------------------------------------------------------------------------------
-    Parameters:
-    - G_fac (Graph): The factor graph where nodes are connected by factors.
-    - clauses (list of lists): List of clauses, where each clause is a list of variable nodes.
-    - tendencies (list of lists): Tendencies for each clause.
-    - devides (list of lists): Decomposed sets of nodes for entropy calculations.
-    - devide_bound (list of lists): Boundaries for each decomposition.
-    - region_info (list): Information about different regions in the graph.
-    - single_list (list): List of single nodes to consider for point-wise entropy calculations.
-    - max_item (int): Maximum index value in the graph.
-    - Nv (list of lists): List of devides of the corresponding of index.
-    - boundaries (list of lists): List of nodes in the boundary of the neighborhoods of the corresponding node of index.
-    - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
-    - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
-    - damping_factor(float): Used to control the update learning rate. If not explicitly specified, the damping factor is set to 0.5 for R=2 and R=3, and 0 for all other cases.
-
-    Returns:
-    - entropy (Tensor): The computed entropy of the system.
-    - step (int): The number of steps taken in the convergence process.
-
-    """
-    if damping_factor is None:
-        if R_region == 2 or R_region == 3:
-            damping_factor = 0.5
-        else:
-            damping_factor = 0
-
-    intersections_info, edges_info, direct_products_info ,else_situations =nxt.cluster_edges_generate_new(G_fac,max_item,devides,devide_bound)
-    direct_products = [sorted(direct_products_info[i][2]) for i in range(len(direct_products_info)) if len(direct_products_info[i][2])>=2 and min(direct_products_info[i][0],direct_products_info[i][1])<=len(region_info)]
-    region_info,region_bound = grn.region_info_change(G_fac,clauses,region_info,max_item,single_list)
-    cavity,converged,edgelist2,step = TNBP_3_sat_interaction_new(G_fac,Nv,boundaries,clauses,tendencies,direct_products,max_item,region_info,region_bound,damping_factor,device)
-    intersections = [sorted(edges_info[i][2]) for i in range(len(edges_info))  ] 
-    loges_devides =  EFT.entropies_cluster(G_fac,clauses,tendencies,devides,devide_bound,max_item,Nv,cavity,device)
-    logs_points = EFT.entropies_point(single_list,G_fac,clauses,tendencies,devides,devide_bound,cavity,edgelist2,degree_node,max_item,device)
-    ms = sum(EFT.entropy_intersection(G_fac,intersections,clauses,tendencies,cavity,max_item,Nv,device))
-    entropy = sum(loges_devides)-sum(logs_points)-ms
-
-    return step
 
 
 device = 'cuda:0'
