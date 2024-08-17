@@ -21,7 +21,7 @@ def entropy_single_point(single_point,G_fac,clauses,tendencies,devides,devide_bo
     - tendencies (list of lists): List of tendencies corresponding to each clause.
     - devides (list of lists): List of node sets, where each set corresponds to a division of the factor graph.
     - devide_bound (list of lists): List of boundaries corresponding to each division.
-    - cavity (dict): Dictionary where keys are nodes and values are tensors representing cavity messages.
+    - cavity (tensor): A tensor with shape (n+m)*(n+m), where n is the number of variable node and m is the number of factor node, to store the cavity messages form the first axis to the second axis.
     - egdelist2 (list of lists): List of edges, where each edge connects two nodes.
     - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
     - max_item (int): The maximum index of nodes in the factor graph.
