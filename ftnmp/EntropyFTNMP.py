@@ -309,7 +309,7 @@ def EntropyZ_new(G_fac,clauses,tendencies,devides,devide_bound,region_info,singl
     - region_info (list): Information about different regions in the graph.
     - single_list (list): List of single nodes to consider for point-wise entropy calculations.
     - max_item (int): Maximum index value in the graph.
-    - Nv (dict): Dictionary where keys are nodes and values are sets of neighboring nodes.
+    - Nv (list of lists): List of devides of the corresponding of index.
     - boundaries (dict): Dictionary where keys are nodes and values are boundary sets.
     - degree_node (dict): Dictionary where keys are nodes and values are their degrees.
     - device (torch.device): The device on which to perform tensor operations (e.g., 'cpu' or 'cuda').
