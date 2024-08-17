@@ -12,7 +12,6 @@ def G_generator_fac(clauses):
     clauses (list of lists): Each clause is a list of integers representing nodes connected by edges in the graph. Nodes within a clause are connected to an additional node representing the clause.
 
     Returns:
-    Returns:
     G (nx.Graph): The generated undirected graph where nodes and edges are defined by the clauses.
     max_item (int): The highest node identifier in the graph, which is the maximum variable node index across all clauses plus the number of clauses.
 
